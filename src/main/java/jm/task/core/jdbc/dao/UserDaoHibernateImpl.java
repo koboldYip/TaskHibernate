@@ -7,6 +7,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaDelete;
 import javax.persistence.criteria.CriteriaQuery;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,7 @@ public class UserDaoHibernateImpl implements UserDao {
     public void saveUser(String name, String lastName, byte age) {
         Session session = sessionFactory.openSession();
         try {
-            session.getTransaction().begin();
+            session.beginTransaction();
             session.persist(new User(name, lastName, age));
             session.getTransaction().commit();
             session.close();
@@ -60,8 +61,9 @@ public class UserDaoHibernateImpl implements UserDao {
     public void removeUserById(long id) {
         Session session = sessionFactory.openSession();
         try {
-            session.getTransaction().begin();
-            session.createQuery("delete from User where id = ?1").setParameter(1, id).executeUpdate();
+            session.beginTransaction();
+            User user = session.get(User.class, id);
+            session.delete(user);
             session.getTransaction().commit();
             session.close();
         } catch (HibernateException e) {
@@ -75,12 +77,10 @@ public class UserDaoHibernateImpl implements UserDao {
         List<User> users = new ArrayList<>();
         Session session = sessionFactory.openSession();
         try {
-            session.getTransaction().begin();
             CriteriaBuilder cb = session.getCriteriaBuilder();
             CriteriaQuery<User> cq = cb.createQuery(User.class);
             cq.from(User.class);
             users = session.createQuery(cq).getResultList();
-            session.getTransaction().commit();
             session.close();
         } catch (HibernateException e) {
             session.getTransaction().rollback();
@@ -93,8 +93,11 @@ public class UserDaoHibernateImpl implements UserDao {
     public void cleanUsersTable() {
         Session session = sessionFactory.openSession();
         try {
-            session.getTransaction().begin();
-            session.createQuery("delete from User").executeUpdate();
+            session.beginTransaction();
+            CriteriaBuilder cb = session.getCriteriaBuilder();
+            CriteriaDelete<User> cq = cb.createCriteriaDelete(User.class);
+            cq.from(User.class);
+            session.createQuery(cq).executeUpdate();
             session.getTransaction().commit();
             session.close();
         } catch (HibernateException e) {
